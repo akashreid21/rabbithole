@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { Task } from '@/types/task';
 
 export default function Dashboard() {
@@ -48,8 +49,7 @@ export default function Dashboard() {
   const connectWhatsApp = async () => {
     try {
       setShowQR(true);
-      const res = await fetch('/api/whatsapp/connect', { method: 'POST' });
-      const data = await res.json();
+      await fetch('/api/whatsapp/connect', { method: 'POST' });
 
       // Start polling for QR code
       const qrInterval = setInterval(async () => {
@@ -142,9 +142,11 @@ export default function Dashboard() {
             {qrCode ? (
               <div className="flex flex-col items-center">
                 <div className="bg-white p-4 rounded-lg border-2 border-gray-200 mb-4">
-                  <img
+                  <Image
                     src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrCode)}`}
                     alt="WhatsApp QR Code"
+                    width={256}
+                    height={256}
                     className="w-64 h-64"
                   />
                 </div>
@@ -153,7 +155,7 @@ export default function Dashboard() {
                 </p>
                 <ol className="text-sm text-gray-500 space-y-1 mb-4">
                   <li>1. Go to Settings → Linked Devices</li>
-                  <li>2. Tap "Link a Device"</li>
+                  <li>2. Tap &quot;Link a Device&quot;</li>
                   <li>3. Scan this QR code</li>
                 </ol>
                 <button

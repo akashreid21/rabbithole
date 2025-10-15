@@ -34,7 +34,7 @@ export async function GET() {
     return NextResponse.json({
       connected: service.isClientReady()
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: 'Failed to check connection status' },
       { status: 500 }
