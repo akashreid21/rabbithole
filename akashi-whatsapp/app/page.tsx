@@ -12,6 +12,9 @@ export default function Dashboard() {
   const [qrCode, setQrCode] = useState('');
   const [showQR, setShowQR] = useState(false);
 
+  // Backend API URL
+  const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+
   // Check connection status
   useEffect(() => {
     checkConnection();
@@ -26,7 +29,7 @@ export default function Dashboard() {
 
   const checkConnection = async () => {
     try {
-      const res = await fetch('/api/whatsapp/connect');
+      const res = await fetch(`${API_URL}/api/whatsapp/connect`);
       const data = await res.json();
       setConnected(data.connected);
     } catch (error) {
@@ -36,7 +39,7 @@ export default function Dashboard() {
 
   const fetchTasks = async () => {
     try {
-      const res = await fetch('/api/tasks');
+      const res = await fetch(`${API_URL}/api/tasks`);
       const data = await res.json();
       setTasks(data.tasks);
       setLoading(false);
@@ -49,11 +52,11 @@ export default function Dashboard() {
   const connectWhatsApp = async () => {
     try {
       setShowQR(true);
-      await fetch('/api/whatsapp/connect', { method: 'POST' });
+      await fetch(`${API_URL}/api/whatsapp/connect`, { method: 'POST' });
 
       // Start polling for QR code
       const qrInterval = setInterval(async () => {
-        const qrRes = await fetch('/api/whatsapp/qr');
+        const qrRes = await fetch(`${API_URL}/api/whatsapp/qr`);
         const qrData = await qrRes.json();
 
         if (qrData.qr) {
@@ -61,7 +64,7 @@ export default function Dashboard() {
         }
 
         // Check if connected
-        const connRes = await fetch('/api/whatsapp/connect');
+        const connRes = await fetch(`${API_URL}/api/whatsapp/connect`);
         const connData = await connRes.json();
         if (connData.connected) {
           setConnected(true);
@@ -82,7 +85,7 @@ export default function Dashboard() {
 
   const updateTaskStatus = async (id: string, status: Task['status']) => {
     try {
-      await fetch(`/api/tasks/${id}`, {
+      await fetch(`${API_URL}/api/tasks/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status }),
@@ -95,7 +98,7 @@ export default function Dashboard() {
 
   const deleteTask = async (id: string) => {
     try {
-      await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
+      await fetch(`${API_URL}/api/tasks/${id}`, { method: 'DELETE' });
       fetchTasks();
     } catch (error) {
       console.error('Failed to delete task:', error);
