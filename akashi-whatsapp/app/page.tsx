@@ -9,7 +9,7 @@ export default function Dashboard() {
   const [connected, setConnected] = useState(false);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'new' | 'in-progress' | 'completed'>('all');
-  const [qrCode, setQrCode] = useState('');
+  const [qrImage, setQrImage] = useState('');
   const [showQR, setShowQR] = useState(false);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
 
@@ -58,7 +58,7 @@ export default function Dashboard() {
     try {
       setShowQR(true);
       setIsAuthenticating(false);
-      setQrCode('');
+      setQrImage('');
       await fetch(`${API_URL}/api/whatsapp/connect`, { method: 'POST' });
 
       let previousQrCode = '';
@@ -69,8 +69,8 @@ export default function Dashboard() {
           const qrRes = await fetch(`${API_URL}/api/whatsapp/qr`);
           const qrData = await qrRes.json();
 
-          if (qrData.qr) {
-            setQrCode(qrData.qr);
+          if (qrData.qrImage) {
+            setQrImage(qrData.qrImage);
             previousQrCode = qrData.qr;
           } else if (previousQrCode && !qrData.qr) {
             // QR code disappeared, likely authenticating
@@ -84,7 +84,7 @@ export default function Dashboard() {
           if (connData.connected) {
             setConnected(true);
             setShowQR(false);
-            setQrCode('');
+            setQrImage('');
             setIsAuthenticating(false);
             clearInterval(qrInterval);
           }
@@ -180,15 +180,16 @@ export default function Dashboard() {
                   Please wait while we establish the connection...
                 </p>
               </div>
-            ) : qrCode ? (
+            ) : qrImage ? (
               <div className="flex flex-col items-center">
                 <div className="bg-white p-4 rounded-lg border-2 border-gray-200 mb-4">
                   <Image
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrCode)}`}
+                    src={qrImage}
                     alt="WhatsApp QR Code"
                     width={256}
                     height={256}
                     className="w-64 h-64"
+                    unoptimized
                   />
                 </div>
                 <p className="text-center text-gray-600 mb-2">
