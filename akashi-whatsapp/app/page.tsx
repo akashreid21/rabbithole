@@ -11,21 +11,10 @@ export default function Dashboard() {
   const [filter, setFilter] = useState<'all' | 'new' | 'in-progress' | 'completed'>('all');
   const [qrCode, setQrCode] = useState('');
   const [showQR, setShowQR] = useState(false);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
 
   // Backend API URL
   const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
-
-  // Check connection status
-  useEffect(() => {
-    checkConnection();
-  }, []);
-
-  // Fetch tasks periodically
-  useEffect(() => {
-    fetchTasks();
-    const interval = setInterval(fetchTasks, 5000); // Refresh every 5 seconds
-    return () => clearInterval(interval);
-  }, []);
 
   const checkConnection = async () => {
     try {
@@ -49,37 +38,75 @@ export default function Dashboard() {
     }
   };
 
+  // Check connection status on mount and periodically
+  useEffect(() => {
+    checkConnection();
+    const interval = setInterval(checkConnection, 5000);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Fetch tasks periodically
+  useEffect(() => {
+    fetchTasks();
+    const interval = setInterval(fetchTasks, 5000); // Refresh every 5 seconds
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const connectWhatsApp = async () => {
     try {
       setShowQR(true);
+      setIsAuthenticating(false);
+      setQrCode('');
       await fetch(`${API_URL}/api/whatsapp/connect`, { method: 'POST' });
+
+      let previousQrCode = '';
 
       // Start polling for QR code
       const qrInterval = setInterval(async () => {
-        const qrRes = await fetch(`${API_URL}/api/whatsapp/qr`);
-        const qrData = await qrRes.json();
+        try {
+          const qrRes = await fetch(`${API_URL}/api/whatsapp/qr`);
+          const qrData = await qrRes.json();
 
-        if (qrData.qr) {
-          setQrCode(qrData.qr);
-        }
+          if (qrData.qr) {
+            setQrCode(qrData.qr);
+            previousQrCode = qrData.qr;
+          } else if (previousQrCode && !qrData.qr) {
+            // QR code disappeared, likely authenticating
+            setIsAuthenticating(true);
+          }
 
-        // Check if connected
-        const connRes = await fetch(`${API_URL}/api/whatsapp/connect`);
-        const connData = await connRes.json();
-        if (connData.connected) {
-          setConnected(true);
-          setShowQR(false);
-          setQrCode('');
-          clearInterval(qrInterval);
+          // Check if connected
+          const connRes = await fetch(`${API_URL}/api/whatsapp/connect`);
+          const connData = await connRes.json();
+
+          if (connData.connected) {
+            setConnected(true);
+            setShowQR(false);
+            setQrCode('');
+            setIsAuthenticating(false);
+            clearInterval(qrInterval);
+          }
+        } catch (error) {
+          console.error('Error during polling:', error);
         }
       }, 2000);
 
       // Stop polling after 2 minutes
-      setTimeout(() => clearInterval(qrInterval), 120000);
+      setTimeout(() => {
+        clearInterval(qrInterval);
+        if (!connected) {
+          setShowQR(false);
+          setIsAuthenticating(false);
+          alert('Connection timeout. Please try again.');
+        }
+      }, 120000);
     } catch (error) {
       console.error('Failed to connect:', error);
       alert('Failed to connect to WhatsApp');
       setShowQR(false);
+      setIsAuthenticating(false);
     }
   };
 
@@ -141,8 +168,19 @@ export default function Dashboard() {
       {showQR && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-8 rounded-lg shadow-xl max-w-md w-full mx-4">
-            <h2 className="text-2xl font-bold mb-4 text-center">Scan QR Code</h2>
-            {qrCode ? (
+            <h2 className="text-2xl font-bold mb-4 text-center">
+              {isAuthenticating ? 'Authenticating...' : 'Scan QR Code'}
+            </h2>
+            {isAuthenticating ? (
+              <div className="flex flex-col items-center py-8">
+                <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-green-600 mb-4"></div>
+                <p className="text-gray-700 font-medium text-lg mb-2">Connecting to WhatsApp</p>
+                <p className="text-sm text-gray-500 text-center">
+                  Your device has been authenticated.<br />
+                  Please wait while we establish the connection...
+                </p>
+              </div>
+            ) : qrCode ? (
               <div className="flex flex-col items-center">
                 <div className="bg-white p-4 rounded-lg border-2 border-gray-200 mb-4">
                   <Image
